@@ -3,1309 +3,187 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width">
-<title>BB Bus Times</title>
-
+<title>BlackBerry Bus Times</title>
 <style>
-body {
-    margin: 6px;
-    padding: 0;
-    background: #fff;
-    color: #000;
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-}
-
-body.dark {
-    background: #111;
-    color: #fff;
-}
-
-h1 {
-    text-align: center;
-    font-size: 21px;
-    margin: 5px 0 8px;
-}
-
-input {
-    width: 94%;
-    padding: 7px;
-    font-size: 14px;
-    border: 1px solid #000;
-}
-
-.dark input {
-    background: #222;
-    color: #fff;
-    border-color: #aaa;
-}
-
-button {
-    padding: 7px 9px;
-    margin: 3px 2px;
-    font-size: 14px;
-    border: 1px solid #000;
-    background: #eee;
-    color: #000;
-}
-
-.dark button {
-    background: #333;
-    color: #fff;
-    border-color: #aaa;
-}
-
-.panel {
-    border: 1px solid #000;
-    padding: 6px;
-    margin-bottom: 7px;
-}
-
-.dark .panel {
-    border-color: #aaa;
-}
-
-.stop {
-    border: 1px solid #000;
-    padding: 9px;
-    margin: 5px 0;
-}
-
-.dark .stop {
-    border-color: #aaa;
-}
-
-.stop a {
-    font-size: 15px;
-    font-weight: bold;
-}
-
-.bus {
-    border-bottom: 1px solid #aaa;
-    padding: 7px 2px;
-}
-
-.route {
-    font-size: 18px;
-    font-weight: bold;
-}
-
-.time {
-    float: right;
-    font-weight: bold;
-}
-
-.small {
-    font-size: 11px;
-}
-
-#error {
-    color: #c00;
-    font-weight: bold;
-}
-
-.dark #error {
-    color: #ff7777;
-}
-
-.favourite {
-    border-bottom: 1px solid #aaa;
-    padding: 8px;
-}
-
-.favourite a {
-    font-weight: bold;
-}
-
-.note {
-    font-size: 11px;
-    margin-top: 5px;
-}
+body{margin:6px;font-family:Arial,sans-serif;font-size:14px;background:#fff;color:#000}
+body.dark{background:#111;color:#fff}
+h1{text-align:center;font-size:20px;margin:5px 0 8px}
+input{width:92%;padding:7px;font-size:14px;border:1px solid #000}
+button{padding:7px 9px;margin:3px 2px;font-size:14px;border:1px solid #000;background:#eee;color:#000}
+.dark button{background:#333;color:#fff;border-color:#aaa}
+.dark input{background:#222;color:#fff;border-color:#aaa}
+.panel{border:1px solid #000;padding:6px;margin-bottom:7px}.dark .panel{border-color:#aaa}
+.stop{border:1px solid #000;padding:9px;margin:5px 0}.dark .stop{border-color:#aaa}
+.stop a,.fav a{font-weight:bold;font-size:15px}
+.bus{border-bottom:1px solid #aaa;padding:7px 2px}.route{font-size:18px;font-weight:bold}.time{float:right;font-weight:bold}
+.small{font-size:11px}.fav{padding:8px;border-bottom:1px solid #aaa}#error{color:#b00000;font-weight:bold}
 </style>
-
 </head>
-
 <body>
-
-<h1>blackberry bus times</h1>
-
+<h1>BB BUS TIMES</h1>
 <div class="panel">
-
-<input id="search"
-    type="text"
-    placeholder="Bus stop or postcode">
-
+<input id="search" type="text" placeholder="Bus stop or postcode">
 <br>
-
-<button onclick="searchStops()">
-SEARCH
-</button>
-
-<button onclick="showFavourites()">
-⭐ FAVOURITES
-</button>
-
-<button onclick="toggleDark()">
-🌙 DARK
-</button>
-
+<button type="button" onclick="searchStops()">SEARCH</button>
+<button type="button" onclick="showFavourites()">FAVOURITES</button>
+<button type="button" onclick="toggleDark()">DARK</button>
 </div>
-
 <div id="status" class="small"></div>
 <div id="error"></div>
-
 <div id="favourites"></div>
 <div id="stops"></div>
 <div id="results"></div>
+<script type="text/javascript">
+var selectedStop="";
+var selectedName="";
+var timer=null;
+var autoRefresh=true;
+var favourites=[];
 
-<script>
+function byId(id){return document.getElementById(id)}
 
-/* =========================================
-   BB BUS TIMES
-   BlackBerry 9900 edition
-========================================= */
-
-var selectedStop = "";
-var selectedName = "";
-
-var refreshTimer = null;
-var autoRefresh = true;
-
-var favourites = [];
-
-loadSettings();
-
-/* =========================================
-   SETTINGS
-========================================= */
-
-function loadSettings() {
-
-    try {
-
-        var saved =
-            localStorage.getItem("bb_favourites");
-
-        if (saved) {
-            favourites = JSON.parse(saved);
-        }
-
-        var dark =
-            localStorage.getItem("bb_dark");
-
-        if (dark == "1") {
-            document.body.className = "dark";
-        }
-
-    } catch (e) {}
-
+function loadSettings(){
+try{
+var f=localStorage.getItem("bb_favourites");
+if(f){favourites=JSON.parse(f)}
+if(localStorage.getItem("bb_dark")==="1"){document.body.className="dark"}
+}catch(e){}
 }
 
-function saveSettings() {
-
-    try {
-
-        localStorage.setItem(
-            "bb_favourites",
-            JSON.stringify(favourites)
-        );
-
-    } catch (e) {}
-
+function saveSettings(){
+try{localStorage.setItem("bb_favourites",JSON.stringify(favourites))}catch(e){}
 }
 
-/* =========================================
-   HTTP REQUEST
-========================================= */
-
-function request(url, callback) {
-
-    var xhr = new XMLHttpRequest();
-
-    xhr.onreadystatechange = function() {
-
-        if (xhr.readyState != 4) {
-            return;
-        }
-
-        if (xhr.status == 200) {
-
-            try {
-
-                callback(
-                    null,
-                    JSON.parse(xhr.responseText)
-                );
-
-            } catch (e) {
-
-                callback("Bad response", null);
-
-            }
-
-        } else {
-
-            callback(
-                "HTTP " + xhr.status,
-                null
-            );
-
-        }
-
-    };
-
-    xhr.open("GET", url, true);
-    xhr.send();
-}
-
-/* =========================================
-   SEARCH
-========================================= */
-
-function searchStops() {
-
-    stopAutoRefresh();
-
-    var query =
-        document.getElementById("search").value;
-
-    query = trim(query);
-
-    if (!query) {
-
-        showError(
-            "Enter a bus stop name."
-        );
-
-        return;
-    }
-
-    clearPage();
-
-    document.getElementById("status").innerHTML =
-        "Searching TfL...";
-
-    /*
-       FIRST SEARCH
-       TfL StopPoint Search
-    */
-
-    var url =
-        "https://api.tfl.gov.uk/StopPoint/Search" +
-        "?query=" +
-        encodeURIComponent(query) +
-        "&modes=bus";
-
-    request(url, function(error, data) {
-
-        if (!error &&
-            data &&
-            data.matches &&
-            data.matches.length > 0) {
-
-            showSearchResults(
-                data.matches,
-                query
-            );
-
-            return;
-        }
-
-        /*
-           SECOND SEARCH
-
-           If normal search failed,
-           try the StopPoint list.
-        */
-
-        document.getElementById("status").innerHTML =
-            "Trying wider stop search...";
-
-        broadStopSearch(query);
-
-    });
-
-}
-
-/* =========================================
-   BROAD STOP SEARCH
-========================================= */
-
-function broadStopSearch(query) {
-
-    var url =
-        "https://api.tfl.gov.uk/StopPoint" +
-        "?modes=bus";
-
-    request(url, function(error, data) {
-
-        if (error ||
-            !data ||
-            !data.length) {
-
-            showError(
-                "No matching bus stops found."
-            );
-
-            document.getElementById("status").innerHTML =
-                "";
-
-            return;
-        }
-
-        var wanted =
-            normalise(query);
-
-        var results = [];
-
-        /*
-           Match the user's words against
-           TfL stop names.
-        */
-
-        for (var i = 0; i < data.length; i++) {
-
-            var stop = data[i];
-
-            if (!stop.name) {
-                continue;
-            }
-
-            var name =
-                normalise(stop.name);
-
-            /*
-               Exact or partial match
-            */
-
-            if (
-                name.indexOf(wanted) >= 0 ||
-                wanted.indexOf(name) >= 0
-            ) {
-
-                results.push(stop);
-
-            }
-
-        }
-
-        /*
-           Also try matching individual words.
-        */
-
-        if (results.length == 0) {
-
-            var words =
-                wanted.split(" ");
-
-            for (
-                var a = 0;
-                a < data.length;
-                a++
-            ) {
-
-                var candidate = data[a];
-
-                if (!candidate.name) {
-                    continue;
-                }
-
-                var candidateName =
-                    normalise(candidate.name);
-
-                var matches = 0;
-
-                for (
-                    var b = 0;
-                    b < words.length;
-                    b++
-                ) {
-
-                    if (
-                        words[b].length > 1 &&
-                        candidateName.indexOf(
-                            words[b]
-                        ) >= 0
-                    ) {
-
-                        matches++;
-
-                    }
-
-                }
-
-                if (
-                    words.length == 1 &&
-                    matches > 0
-                ) {
-
-                    results.push(candidate);
-
-                }
-
-                else if (
-                    words.length > 1 &&
-                    matches == words.length
-                ) {
-
-                    results.push(candidate);
-
-                }
-
-            }
-
-        }
-
-        /*
-           Remove duplicate IDs.
-        */
-
-        results =
-            removeDuplicates(results);
-
-        /*
-           Limit results so the 9900
-           does not have to render
-           a huge page.
-        */
-
-        results =
-            results.slice(0, 15);
-
-        if (results.length == 0) {
-
-            showError(
-                "No matching bus stops found."
-            );
-
-            document.getElementById(
-                "status"
-            ).innerHTML = "";
-
-            return;
-        }
-
-        showSearchResults(
-            results,
-            query
-        );
-
-    });
-
-}
-
-/* =========================================
-   SHOW SEARCH RESULTS
-========================================= */
-
-function showSearchResults(
-    matches,
-    query
-) {
-
-    var html =
-        "<b>Choose your stop:</b>";
-
-    html +=
-        '<div class="note">' +
-        matches.length +
-        " possible stop";
-
-    if (matches.length != 1) {
-        html += "s";
-    }
-
-    html +=
-        " found.</div>";
-
-    var count =
-        Math.min(
-            matches.length,
-            15
-        );
-
-    for (
-        var i = 0;
-        i < count;
-        i++
-    ) {
-
-        var stop =
-            matches[i];
-
-        if (!stop.id ||
-            !stop.name) {
-
-            continue;
-        }
-
-        html +=
-            '<div class="stop">' +
-
-            '<a href="#" ' +
-            'onclick="loadStop(\'' +
-
-            escapeText(stop.id) +
-
-            '\',\'' +
-
-            escapeText(stop.name) +
-
-            '\'); return false;">' +
-
-            stop.name +
-
-            '</a>' +
-
-            '<br>' +
-
-            '<span class="small">' +
-
-            stop.id +
-
-            '</span>' +
-
-            '</div>';
-
-    }
-
-    document.getElementById(
-        "status"
-    ).innerHTML = "";
-
-    document.getElementById(
-        "stops"
-    ).innerHTML = html;
-
-}
-
-/* =========================================
-   LOAD STOP
-========================================= */
-
-function loadStop(id, name) {
-
-    stopAutoRefresh();
-
-    selectedStop = id;
-    selectedName = name;
-
-    document.getElementById(
-        "stops"
-    ).innerHTML = "";
-
-    document.getElementById(
-        "favourites"
-    ).innerHTML = "";
-
-    loadArrivals();
-
-    startAutoRefresh();
-
-}
-
-/* =========================================
-   LIVE ARRIVALS
-========================================= */
-
-function loadArrivals() {
-
-    if (!selectedStop) {
-        return;
-    }
-
-    document.getElementById(
-        "status"
-    ).innerHTML =
-        "Updating live times...";
-
-    var url =
-        "https://api.tfl.gov.uk/StopPoint/" +
-
-        encodeURIComponent(
-            selectedStop
-        ) +
-
-        "/Arrivals";
-
-    request(url, function(error, data) {
-
-        if (error ||
-            !data) {
-
-            showError(
-                "Could not load live bus times."
-            );
-
-            return;
-        }
-
-        /*
-           Some small TfL stops are returned as a
-           parent StopPoint with the actual boarding
-           points underneath it. The parent can have
-           zero arrivals even though its child stops
-           have live buses. If that happens, load the
-           child StopPoints and combine their arrivals.
-        */
-        if (data.length == 0) {
-
-            var detailUrl =
-                "https://api.tfl.gov.uk/StopPoint/" +
-                encodeURIComponent(selectedStop) +
-                "?includeChildren=true";
-
-            request(detailUrl, function(detailError, detail) {
-
-                if (detailError || !detail) {
-                    showError(
-                        "No live buses at this stop right now."
-                    );
-                    document.getElementById("status").innerHTML =
-                        "Updated " + new Date().toLocaleTimeString();
-                    return;
-                }
-
-                var children = detail.children || [];
-
-                if (children.length == 0) {
-                showArrivals([]);
-                    return;
-                }
-
-                var combined = [];
-                var pending = children.length;
-
-                for (var c = 0; c < children.length; c++) {
-
-                    (function(child) {
-
-                        if (!child.id) {
-                            pending--;
-                            if (pending == 0) showArrivals(combined);
-                            return;
-                        }
-
-                        var childUrl =
-                            "https://api.tfl.gov.uk/StopPoint/" +
-                            encodeURIComponent(child.id) +
-                            "/Arrivals";
-
-                        request(childUrl, function(childError, childData) {
-
-                            if (!childError && childData) {
-                                for (var x = 0; x < childData.length; x++) {
-                                    combined.push(childData[x]);
-                                }
-                            }
-
-                            pending--;
-
-                            if (pending == 0) {
-                                showArrivals(combined);
-                            }
-                        });
-
-                    })(children[c]);
-                }
-
-                return;
-            });
-
-            return;
-        }
-
-        showArrivals(data);
-    });
-}
-
-/* =========================================
-   DISPLAY ARRIVALS
-========================================= */
-
-function showArrivals(data) {
-
-        data.sort(function(a, b) {
-
-            return (
-                a.timeToStation -
-                b.timeToStation
-            );
-
-        });
-
-        var html =
-            '<div class="panel">' +
-
-            '<b>' +
-            selectedName +
-            '</b>' +
-
-            '<br><br>' +
-
-            favouriteButton() +
-
-            '<button onclick="toggleAutoRefresh()">' +
-
-            autoRefreshText() +
-
-            '</button>' +
-
-            '<button onclick="toggleDark()">' +
-
-            '🌙 DARK' +
-
-            '</button>' +
-
-            '</div>';
-
-        var count =
-            Math.min(
-                data.length,
-                15
-            );
-
-        for (
-            var i = 0;
-            i < count;
-            i++
-        ) {
-
-            var bus =
-                data[i];
-
-            var minutes =
-                Math.round(
-                    bus.timeToStation / 60
-                );
-
-            if (minutes < 0) {
-                minutes = 0;
-            }
-
-            html +=
-                '<div class="bus">' +
-
-                '<span class="route">' +
-
-                escapeHTML(
-                    bus.lineName
-                ) +
-
-                '</span>' +
-
-                '<span class="time">' +
-
-                minutes +
-
-                ' min' +
-
-                '</span>' +
-
-                '<br>' +
-
-                escapeHTML(
-                    bus.destinationName
-                ) +
-
-                '</div>';
-
-        }
-
-        if (count == 0) {
-
-            html +=
-                "No live buses found.";
-
-        }
-
-        html +=
-            '<br>' +
-
-            '<button onclick="loadArrivals()">' +
-
-            '🔄 REFRESH NOW' +
-
-            '</button>';
-
-        document.getElementById(
-            "error"
-        ).innerHTML = "";
-
-        document.getElementById(
-            "status"
-        ).innerHTML =
-
-            "Updated " +
-            new Date().toLocaleTimeString();
-
-        document.getElementById(
-            "results"
-        ).innerHTML = html;
-
-    });
-
-}
-
-/* =========================================
-   FAVOURITES
-========================================= */
-
-function isFavourite(id) {
-
-    for (
-        var i = 0;
-        i < favourites.length;
-        i++
-    ) {
-
-        if (
-            favourites[i].id == id
-        ) {
-
-            return true;
-
-        }
-
-    }
-
-    return false;
-
-}
-
-function favouriteButton() {
-
-    if (
-        isFavourite(selectedStop)
-    ) {
-
-        return (
-            '<button onclick="removeFavourite()">' +
-            '★ REMOVE FAVOURITE' +
-            '</button>'
-        );
-
-    }
-
-    return (
-        '<button onclick="addFavourite()">' +
-        '☆ SAVE FAVOURITE' +
-        '</button>'
-    );
-
-}
-
-function addFavourite() {
-
-    if (!selectedStop) {
-        return;
-    }
-
-    if (
-        !isFavourite(selectedStop)
-    ) {
-
-        favourites.push({
-
-            id: selectedStop,
-
-            name: selectedName
-
-        });
-
-        saveSettings();
-
-        loadArrivals();
-
-    }
-
-}
-
-function removeFavourite() {
-
-    for (
-        var i = 0;
-        i < favourites.length;
-        i++
-    ) {
-
-        if (
-            favourites[i].id ==
-            selectedStop
-        ) {
-
-            favourites.splice(i, 1);
-
-            break;
-
-        }
-
-    }
-
-    saveSettings();
-
-    loadArrivals();
-
-}
-
-function showFavourites() {
-
-    stopAutoRefresh();
-
-    clearPage();
-
-    var html =
-        '<div class="panel">' +
-        '<b>⭐ MY FAVOURITE STOPS</b>' +
-        '</div>';
-
-    if (
-        favourites.length == 0
-    ) {
-
-        html +=
-            "You have no saved stops yet.";
-
-    }
-
-    for (
-        var i = 0;
-        i < favourites.length;
-        i++
-    ) {
-
-        html +=
-
-            '<div class="favourite">' +
-
-            '<a href="#" onclick="' +
-
-            'loadStop(\'' +
-
-            escapeText(
-                favourites[i].id
-            ) +
-
-            '\',\'' +
-
-            escapeText(
-                favourites[i].name
-            ) +
-
-            '\'); return false;">' +
-
-            '⭐ ' +
-
-            escapeHTML(
-                favourites[i].name
-            ) +
-
-            '</a>' +
-
-            '</div>';
-
-    }
-
-    document.getElementById(
-        "favourites"
-    ).innerHTML = html;
-
-}
-
-/* =========================================
-   AUTO REFRESH
-========================================= */
-
-function startAutoRefresh() {
-
-    if (!autoRefresh) {
-        return;
-    }
-
-    stopAutoRefresh();
-
-    /*
-       30 seconds
-    */
-
-    refreshTimer =
-        setInterval(
-            loadArrivals,
-            30000
-        );
-
-}
-
-function stopAutoRefresh() {
-
-    if (refreshTimer) {
-
-        clearInterval(
-            refreshTimer
-        );
-
-        refreshTimer = null;
-
-    }
-
-}
-
-function toggleAutoRefresh() {
-
-    autoRefresh =
-        !autoRefresh;
-
-    if (autoRefresh) {
-
-        startAutoRefresh();
-
-    }
-
-    else {
-
-        stopAutoRefresh();
-
-    }
-
-    loadArrivals();
-
-}
-
-function autoRefreshText() {
-
-    if (autoRefresh) {
-
-        return "⏱ AUTO: ON";
-
-    }
-
-    return "⏱ AUTO: OFF";
-
-}
-
-/* =========================================
-   DARK MODE
-========================================= */
-
-function toggleDark() {
-
-    if (
-        document.body.className ==
-        "dark"
-    ) {
-
-        document.body.className = "";
-
-        localStorage.setItem(
-            "bb_dark",
-            "0"
-        );
-
-    }
-
-    else {
-
-        document.body.className =
-            "dark";
-
-        localStorage.setItem(
-            "bb_dark",
-            "1"
-        );
-
-    }
-
-}
-
-/* =========================================
-   KEYBOARD
-========================================= */
-
-document.onkeydown =
-function(e) {
-
-    e = e ||
-        window.event;
-
-    var key =
-        e.keyCode;
-
-    /*
-       ENTER
-       Search
-    */
-
-    if (key == 13) {
-
-        var active =
-            document.activeElement;
-
-        if (
-            active &&
-            active.id == "search"
-        ) {
-
-            searchStops();
-
-        }
-
-    }
-
-    /*
-       ESC
-       Return to search
-    */
-
-    if (key == 27) {
-
-        stopAutoRefresh();
-
-        document.getElementById(
-            "search"
-        ).focus();
-
-    }
-
+function request(url,callback){
+var x=new XMLHttpRequest();
+x.onreadystatechange=function(){
+if(x.readyState!==4){return}
+if(x.status===200){
+try{callback(null,JSON.parse(x.responseText))}catch(e){callback("bad response",null)}
+}else{callback("HTTP "+x.status,null)}
 };
-
-/* =========================================
-   HELPERS
-========================================= */
-
-function normalise(text) {
-
-    text =
-        String(text).toLowerCase();
-
-    /*
-       Remove punctuation
-    */
-
-    text =
-        text.replace(
-            /[^a-z0-9 ]/g,
-            " "
-        );
-
-    /*
-       Remove double spaces
-    */
-
-    text =
-        text.replace(
-            /\s+/g,
-            " "
-        );
-
-    return trim(text);
-
+try{x.open("GET",url,true);x.send()}catch(e){callback("connection error",null)}
 }
 
-function trim(text) {
-
-    return String(text)
-        .replace(/^\s+|\s+$/g, "");
-
+function searchStops(){
+stopAutoRefresh();
+var q=byId("search").value.replace(/^\s+|\s+$/g,"");
+if(!q){byId("error").innerHTML="Type a bus stop name.";return}
+clearPage();
+byId("status").innerHTML="Searching TfL...";
+var url="https://api.tfl.gov.uk/StopPoint/Search?query="+encodeURIComponent(q)+"&modes=bus";
+request(url,function(err,data){
+if(!err&&data&&data.matches&&data.matches.length){showStops(data.matches);return}
+byId("status").innerHTML="No exact search result. Trying wider search...";
+wideSearch(q);
+});
 }
 
-function removeDuplicates(array) {
-
-    var output = [];
-    var seen = {};
-
-    for (
-        var i = 0;
-        i < array.length;
-        i++
-    ) {
-
-        if (
-            !seen[array[i].id]
-        ) {
-
-            seen[array[i].id] = true;
-
-            output.push(
-                array[i]
-            );
-
-        }
-
-    }
-
-    return output;
-
+function wideSearch(q){
+var wanted=normalise(q);
+var url="https://api.tfl.gov.uk/StopPoint?modes=bus";
+request(url,function(err,data){
+if(err||!data){byId("error").innerHTML="TfL search failed.";return}
+var out=[],i,n,s,words,j,ok;
+for(i=0;i<data.length;i++){
+s=data[i]; if(!s.name||!s.id){continue}
+n=normalise(s.name);
+if(n.indexOf(wanted)>=0){out.push(s)}
+}
+if(!out.length){
+words=wanted.split(" ");
+for(i=0;i<data.length;i++){
+s=data[i]; if(!s.name||!s.id){continue}
+n=normalise(s.name);ok=true;
+for(j=0;j<words.length;j++){if(words[j].length>1&&n.indexOf(words[j])<0){ok=false;break}}
+if(ok){out.push(s)}
+}
+}
+showStops(out.slice(0,15));
+});
 }
 
-function escapeText(text) {
-
-    return String(text)
-        .replace(
-            /\\/g,
-            "\\\\"
-        )
-        .replace(
-            /'/g,
-            "\\'"
-        );
-
+function showStops(list){
+var h="<b>Choose your stop:</b>";
+if(!list||!list.length){h+="<br>No matching stops found.";byId("status").innerHTML="";byId("stops").innerHTML=h;return}
+var i,s;
+for(i=0;i<Math.min(list.length,15);i++){
+s=list[i];
+h+='<div class="stop"><a href="#" onclick="loadStop(\''+js(s.id)+'\',\''+js(s.name)+'\');return false;">'+html(s.name)+'</a><br><span class="small">'+html(s.id)+'</span></div>';
+}
+byId("status").innerHTML="";byId("stops").innerHTML=h;
 }
 
-function escapeHTML(text) {
-
-    return String(text)
-        .replace(
-            /&/g,
-            "&"
-        )
-        .replace(
-            /</g,
-            "<"
-        )
-        .replace(
-            />/g,
-            ">"
-        )
-        .replace(
-            /"/g,
-            """
-        );
-
+function loadStop(id,name){
+stopAutoRefresh();selectedStop=id;selectedName=name;
+byId("stops").innerHTML="";byId("favourites").innerHTML="";loadArrivals();startAutoRefresh();
 }
 
-function showError(text) {
-
-    document.getElementById(
-        "error"
-    ).innerHTML = text;
-
+function loadArrivals(){
+if(!selectedStop){return}
+byId("status").innerHTML="Updating live times...";
+var url="https://api.tfl.gov.uk/StopPoint/"+encodeURIComponent(selectedStop)+"/Arrivals";
+request(url,function(err,data){
+if(err||!data){byId("error").innerHTML="Could not contact TfL.";return}
+if(data.length){showArrivals(data);return}
+loadChildren(selectedStop);
+});
 }
 
-function clearPage() {
-
-    document.getElementById(
-        "error"
-    ).innerHTML = "";
-
-    document.getElementById(
-        "status"
-    ).innerHTML = "";
-
-    document.getElementById(
-        "stops"
-    ).innerHTML = "";
-
-    document.getElementById(
-        "results"
-    ).innerHTML = "";
-
-    document.getElementById(
-        "favourites"
-    ).innerHTML = "";
-
+function loadChildren(id){
+var url="https://api.tfl.gov.uk/StopPoint/"+encodeURIComponent(id)+"?includeChildren=true";
+request(url,function(err,detail){
+if(err||!detail||!detail.children||!detail.children.length){showArrivals([]);return}
+var children=detail.children, combined=[],left=children.length,i;
+for(i=0;i<children.length;i++){
+(function(child){
+if(!child.id){left--;if(!left){showArrivals(combined)}return}
+var u="https://api.tfl.gov.uk/StopPoint/"+encodeURIComponent(child.id)+"/Arrivals";
+request(u,function(e,d){
+if(!e&&d){combined=combined.concat(d)}
+left--;if(!left){showArrivals(combined)}
+});
+})(children[i]);
+}
+});
 }
 
-</script>
+function showArrivals(data){
+data.sort(function(a,b){return a.timeToStation-b.timeToStation});
+var h='<div class="panel"><b>'+html(selectedName)+'</b><br><br>'+favButton()+'<button type="button" onclick="toggleAutoRefresh()">'+(autoRefresh?"AUTO: ON":"AUTO: OFF")+'</button><button type="button" onclick="toggleDark()">DARK</button></div>';
+var i,b,m;
+for(i=0;i<Math.min(data.length,15);i++){
+b=data[i];m=Math.round(b.timeToStation/60);if(m<0){m=0}
+h+='<div class="bus"><span class="route">'+html(b.lineName)+'</span><span class="time">'+m+' min</span><br>'+html(b.destinationName)+'</div>';
+}
+if(!data.length){h+="No live buses found right now."}
+h+='<br><button type="button" onclick="loadArrivals()">REFRESH NOW</button>';
+byId("error").innerHTML="";byId("status").innerHTML="Updated "+new Date().toLocaleTimeString();byId("results").innerHTML=h;
+}
+
+function favButton(){return isFav(selectedStop)?'<button type="button" onclick="removeFavourite()">REMOVE FAVOURITE</button>':'<button type="button" onclick="addFavourite()">SAVE FAVOURITE</button>'}
+function isFav(id){var i;for(i=0;i<favourites.length;i++){if(favourites[i].id===id){return true}}return false}
+function addFavourite(){if(selectedStop&&!isFav(selectedStop)){favourites.push({id:selectedStop,name:selectedName});saveSettings();loadArrivals()}}
+function removeFavourite(){var i;for(i=0;i<favourites.length;i++){if(favourites[i].id===selectedStop){favourites.splice(i,1);break}}saveSettings();loadArrivals()}
+
+function showFavourites(){
+stopAutoRefresh();clearPage();var h='<div class="panel"><b>MY FAVOURITES</b></div>',i;
+if(!favourites.length){h+="No saved stops yet."}
+for(i=0;i<favourites.length;i++){h+='<div class="fav"><a href="#" onclick="loadStop(\''+js(favourites[i].id)+'\',\''+js(favourites[i].name)+'\');return false;">'+html(favourites[i].name)+'</a></div>'}
+byId("favourites").innerHTML=h;
+}
+
+function startAutoRefresh(){if(autoRefresh){stopAutoRefresh();timer=setInterval(loadArrivals,30000)}}
+function stopAutoRefresh(){if(timer){clearInterval(timer);timer=null}}
+function toggleAutoRefresh(){autoRefresh=!autoRefresh;if(autoRefresh){startAutoRefresh()}else{stopAutoRefresh()}loadArrivals()}
+function toggleDark(){if(document.body.className==="dark"){document.body.className="";localStorage.setItem("bb_dark","0")}else{document.body.className="dark";localStorage.setItem("bb_dark","1")}}
+function normalise(t){return String(t).toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").replace(/^\s+|\s+$/g,"")}
+function js(t){return String(t).replace(/\/g,"\\").replace(/'/g,"\'")}
+function html(t){return String(t).replace(/&/g,"&").replace(/</g,"<").replace(/>/g,">").replace(/"/g,""")}
+function clearPage(){byId("error").innerHTML="";byId("status").innerHTML="";byId("stops").innerHTML="";byId("results").innerHTML="";byId("favourites").innerHTML=""}
+
+byId("search").onkeypress=function(e){e=e||window.event;if((e.keyCode||e.which)===13){searchStops();return false}};
+loadSettings(); </script>
 
 </body>
 </html>
