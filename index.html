@@ -127,7 +127,7 @@ button {
 
 <body>
 
-<h1>⭐ BB BUS TIMES</h1>
+<h1>blackberry bus times</h1>
 
 <div class="panel">
 
@@ -175,7 +175,6 @@ var favourites = [];
 
 loadSettings();
 
-
 /* =========================================
    SETTINGS
 ========================================= */
@@ -202,7 +201,6 @@ function loadSettings() {
 
 }
 
-
 function saveSettings() {
 
     try {
@@ -215,7 +213,6 @@ function saveSettings() {
     } catch (e) {}
 
 }
-
 
 /* =========================================
    HTTP REQUEST
@@ -261,7 +258,6 @@ function request(url, callback) {
     xhr.send();
 }
 
-
 /* =========================================
    SEARCH
 ========================================= */
@@ -289,7 +285,6 @@ function searchStops() {
     document.getElementById("status").innerHTML =
         "Searching TfL...";
 
-
     /*
        FIRST SEARCH
        TfL StopPoint Search
@@ -300,7 +295,6 @@ function searchStops() {
         "?query=" +
         encodeURIComponent(query) +
         "&modes=bus";
-
 
     request(url, function(error, data) {
 
@@ -317,7 +311,6 @@ function searchStops() {
             return;
         }
 
-
         /*
            SECOND SEARCH
 
@@ -333,7 +326,6 @@ function searchStops() {
     });
 
 }
-
 
 /* =========================================
    BROAD STOP SEARCH
@@ -361,12 +353,10 @@ function broadStopSearch(query) {
             return;
         }
 
-
         var wanted =
             normalise(query);
 
         var results = [];
-
 
         /*
            Match the user's words against
@@ -384,7 +374,6 @@ function broadStopSearch(query) {
             var name =
                 normalise(stop.name);
 
-
             /*
                Exact or partial match
             */
@@ -399,7 +388,6 @@ function broadStopSearch(query) {
             }
 
         }
-
 
         /*
            Also try matching individual words.
@@ -468,14 +456,12 @@ function broadStopSearch(query) {
 
         }
 
-
         /*
            Remove duplicate IDs.
         */
 
         results =
             removeDuplicates(results);
-
 
         /*
            Limit results so the 9900
@@ -485,7 +471,6 @@ function broadStopSearch(query) {
 
         results =
             results.slice(0, 15);
-
 
         if (results.length == 0) {
 
@@ -500,7 +485,6 @@ function broadStopSearch(query) {
             return;
         }
 
-
         showSearchResults(
             results,
             query
@@ -509,7 +493,6 @@ function broadStopSearch(query) {
     });
 
 }
-
 
 /* =========================================
    SHOW SEARCH RESULTS
@@ -535,13 +518,11 @@ function showSearchResults(
     html +=
         " found.</div>";
 
-
     var count =
         Math.min(
             matches.length,
             15
         );
-
 
     for (
         var i = 0;
@@ -557,7 +538,6 @@ function showSearchResults(
 
             continue;
         }
-
 
         html +=
             '<div class="stop">' +
@@ -589,7 +569,6 @@ function showSearchResults(
 
     }
 
-
     document.getElementById(
         "status"
     ).innerHTML = "";
@@ -599,7 +578,6 @@ function showSearchResults(
     ).innerHTML = html;
 
 }
-
 
 /* =========================================
    LOAD STOP
@@ -626,7 +604,6 @@ function loadStop(id, name) {
 
 }
 
-
 /* =========================================
    LIVE ARRIVALS
 ========================================= */
@@ -637,12 +614,10 @@ function loadArrivals() {
         return;
     }
 
-
     document.getElementById(
         "status"
     ).innerHTML =
         "Updating live times...";
-
 
     var url =
         "https://api.tfl.gov.uk/StopPoint/" +
@@ -652,7 +627,6 @@ function loadArrivals() {
         ) +
 
         "/Arrivals";
-
 
     request(url, function(error, data) {
 
@@ -695,7 +669,7 @@ function loadArrivals() {
                 var children = detail.children || [];
 
                 if (children.length == 0) {
-                    showArrivals([]);
+                showArrivals([]);
                     return;
                 }
 
@@ -745,13 +719,11 @@ function loadArrivals() {
     });
 }
 
-
 /* =========================================
    DISPLAY ARRIVALS
 ========================================= */
 
 function showArrivals(data) {
-
 
         data.sort(function(a, b) {
 
@@ -761,7 +733,6 @@ function showArrivals(data) {
             );
 
         });
-
 
         var html =
             '<div class="panel">' +
@@ -788,13 +759,11 @@ function showArrivals(data) {
 
             '</div>';
 
-
         var count =
             Math.min(
                 data.length,
                 15
             );
-
 
         for (
             var i = 0;
@@ -805,17 +774,14 @@ function showArrivals(data) {
             var bus =
                 data[i];
 
-
             var minutes =
                 Math.round(
                     bus.timeToStation / 60
                 );
 
-
             if (minutes < 0) {
                 minutes = 0;
             }
-
 
             html +=
                 '<div class="bus">' +
@@ -846,14 +812,12 @@ function showArrivals(data) {
 
         }
 
-
         if (count == 0) {
 
             html +=
                 "No live buses found.";
 
         }
-
 
         html +=
             '<br>' +
@@ -864,11 +828,9 @@ function showArrivals(data) {
 
             '</button>';
 
-
         document.getElementById(
             "error"
         ).innerHTML = "";
-
 
         document.getElementById(
             "status"
@@ -877,7 +839,6 @@ function showArrivals(data) {
             "Updated " +
             new Date().toLocaleTimeString();
 
-
         document.getElementById(
             "results"
         ).innerHTML = html;
@@ -885,7 +846,6 @@ function showArrivals(data) {
     });
 
 }
-
 
 /* =========================================
    FAVOURITES
@@ -913,7 +873,6 @@ function isFavourite(id) {
 
 }
 
-
 function favouriteButton() {
 
     if (
@@ -928,7 +887,6 @@ function favouriteButton() {
 
     }
 
-
     return (
         '<button onclick="addFavourite()">' +
         '☆ SAVE FAVOURITE' +
@@ -937,13 +895,11 @@ function favouriteButton() {
 
 }
 
-
 function addFavourite() {
 
     if (!selectedStop) {
         return;
     }
-
 
     if (
         !isFavourite(selectedStop)
@@ -957,7 +913,6 @@ function addFavourite() {
 
         });
 
-
         saveSettings();
 
         loadArrivals();
@@ -965,7 +920,6 @@ function addFavourite() {
     }
 
 }
-
 
 function removeFavourite() {
 
@@ -988,13 +942,11 @@ function removeFavourite() {
 
     }
 
-
     saveSettings();
 
     loadArrivals();
 
 }
-
 
 function showFavourites() {
 
@@ -1007,7 +959,6 @@ function showFavourites() {
         '<b>⭐ MY FAVOURITE STOPS</b>' +
         '</div>';
 
-
     if (
         favourites.length == 0
     ) {
@@ -1016,7 +967,6 @@ function showFavourites() {
             "You have no saved stops yet.";
 
     }
-
 
     for (
         var i = 0;
@@ -1056,13 +1006,11 @@ function showFavourites() {
 
     }
 
-
     document.getElementById(
         "favourites"
     ).innerHTML = html;
 
 }
-
 
 /* =========================================
    AUTO REFRESH
@@ -1074,9 +1022,7 @@ function startAutoRefresh() {
         return;
     }
 
-
     stopAutoRefresh();
-
 
     /*
        30 seconds
@@ -1089,7 +1035,6 @@ function startAutoRefresh() {
         );
 
 }
-
 
 function stopAutoRefresh() {
 
@@ -1105,12 +1050,10 @@ function stopAutoRefresh() {
 
 }
 
-
 function toggleAutoRefresh() {
 
     autoRefresh =
         !autoRefresh;
-
 
     if (autoRefresh) {
 
@@ -1124,11 +1067,9 @@ function toggleAutoRefresh() {
 
     }
 
-
     loadArrivals();
 
 }
-
 
 function autoRefreshText() {
 
@@ -1141,7 +1082,6 @@ function autoRefreshText() {
     return "⏱ AUTO: OFF";
 
 }
-
 
 /* =========================================
    DARK MODE
@@ -1177,7 +1117,6 @@ function toggleDark() {
 
 }
 
-
 /* =========================================
    KEYBOARD
 ========================================= */
@@ -1188,10 +1127,8 @@ function(e) {
     e = e ||
         window.event;
 
-
     var key =
         e.keyCode;
-
 
     /*
        ENTER
@@ -1203,7 +1140,6 @@ function(e) {
         var active =
             document.activeElement;
 
-
         if (
             active &&
             active.id == "search"
@@ -1214,7 +1150,6 @@ function(e) {
         }
 
     }
-
 
     /*
        ESC
@@ -1233,7 +1168,6 @@ function(e) {
 
 };
 
-
 /* =========================================
    HELPERS
 ========================================= */
@@ -1242,7 +1176,6 @@ function normalise(text) {
 
     text =
         String(text).toLowerCase();
-
 
     /*
        Remove punctuation
@@ -1254,7 +1187,6 @@ function normalise(text) {
             " "
         );
 
-
     /*
        Remove double spaces
     */
@@ -1265,11 +1197,9 @@ function normalise(text) {
             " "
         );
 
-
     return trim(text);
 
 }
-
 
 function trim(text) {
 
@@ -1277,7 +1207,6 @@ function trim(text) {
         .replace(/^\s+|\s+$/g, "");
 
 }
-
 
 function removeDuplicates(array) {
 
@@ -1308,7 +1237,6 @@ function removeDuplicates(array) {
 
 }
 
-
 function escapeText(text) {
 
     return String(text)
@@ -1323,29 +1251,27 @@ function escapeText(text) {
 
 }
 
-
 function escapeHTML(text) {
 
     return String(text)
         .replace(
             /&/g,
-            "&amp;"
+            "&"
         )
         .replace(
             /</g,
-            "&lt;"
+            "<"
         )
         .replace(
             />/g,
-            "&gt;"
+            ">"
         )
         .replace(
             /"/g,
-            "&quot;"
+            """
         );
 
 }
-
 
 function showError(text) {
 
@@ -1354,7 +1280,6 @@ function showError(text) {
     ).innerHTML = text;
 
 }
-
 
 function clearPage() {
 
