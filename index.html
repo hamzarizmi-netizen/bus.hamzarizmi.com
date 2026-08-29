@@ -127,7 +127,7 @@ button {
 
 <body>
 
-<h1>blackberry bus times</h1>
+<h1>⭐ BB BUS TIMES</h1>
 
 <div class="panel">
 
@@ -138,15 +138,15 @@ button {
 <br>
 
 <button onclick="searchStops()">
-search
+SEARCH
 </button>
 
 <button onclick="showFavourites()">
-⭐ fav
+⭐ FAVOURITES
 </button>
 
 <button onclick="toggleDark()">
-🌙 dark
+🌙 DARK
 </button>
 
 </div>
@@ -665,6 +665,92 @@ function loadArrivals() {
 
             return;
         }
+
+        /*
+           Some small TfL stops are returned as a
+           parent StopPoint with the actual boarding
+           points underneath it. The parent can have
+           zero arrivals even though its child stops
+           have live buses. If that happens, load the
+           child StopPoints and combine their arrivals.
+        */
+        if (data.length == 0) {
+
+            var detailUrl =
+                "https://api.tfl.gov.uk/StopPoint/" +
+                encodeURIComponent(selectedStop) +
+                "?includeChildren=true";
+
+            request(detailUrl, function(detailError, detail) {
+
+                if (detailError || !detail) {
+                    showError(
+                        "No live buses at this stop right now."
+                    );
+                    document.getElementById("status").innerHTML =
+                        "Updated " + new Date().toLocaleTimeString();
+                    return;
+                }
+
+                var children = detail.children || [];
+
+                if (children.length == 0) {
+                    showArrivals([]);
+                    return;
+                }
+
+                var combined = [];
+                var pending = children.length;
+
+                for (var c = 0; c < children.length; c++) {
+
+                    (function(child) {
+
+                        if (!child.id) {
+                            pending--;
+                            if (pending == 0) showArrivals(combined);
+                            return;
+                        }
+
+                        var childUrl =
+                            "https://api.tfl.gov.uk/StopPoint/" +
+                            encodeURIComponent(child.id) +
+                            "/Arrivals";
+
+                        request(childUrl, function(childError, childData) {
+
+                            if (!childError && childData) {
+                                for (var x = 0; x < childData.length; x++) {
+                                    combined.push(childData[x]);
+                                }
+                            }
+
+                            pending--;
+
+                            if (pending == 0) {
+                                showArrivals(combined);
+                            }
+                        });
+
+                    })(children[c]);
+                }
+
+                return;
+            });
+
+            return;
+        }
+
+        showArrivals(data);
+    });
+}
+
+
+/* =========================================
+   DISPLAY ARRIVALS
+========================================= */
+
+function showArrivals(data) {
 
 
         data.sort(function(a, b) {
