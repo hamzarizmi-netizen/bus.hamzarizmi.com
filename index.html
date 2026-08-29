@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BB Bus Times</title>
+<style>
+body {
+    margin: 8px;
+    background: #fff;
+    color: #000;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+}
+
+h1 {
+    font-size: 22px;
+    text-align: center;
+    margin: 5px 0 10px;
+}
+
+input {
+    width: 95%;
+    padding: 7px;
+    font-size: 14px;
+    border: 1px solid #000;
+}
+
+button {
+    padding: 7px 12px;
+    margin-top: 6px;
+    font-size: 14px;
+}
+
+.stop {
+    border: 1px solid #000;
+    padding: 8px;
+    margin-top: 5px;
+}
+
+.bus {
+    border-bottom: 1px solid #aaa;
+    padding: 8px 0;
+}
+
+.route {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.time {
+    float: right;
+    font-weight: bold;
+}
+
+.small {
+    font-size: 11px;
+}
+
+#error {
+    color: #900;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h1>BB BUS TIMES</h1>
+
+<input id="search" type="text"
+       placeholder="Bus stop or postcode">
+
+<br>
+
+<button onclick="searchStops()">SEARCH</button>
+
+<div id="status" class="small"></div>
+<div id="error"></div>
+<div id="stops"></div>
+<div id="results"></div>
+
+<script>
+
+var selectedStop = "";
+
+function request(url, callback) {
+
+    var xhr = new XMLHttpRequest();
+
+    xhr.onreadystatechange = function() {
+
+        if (xhr.readyState == 4) {
+
+            if (xhr.status == 200) {
+                try {
+                    callback(null, JSON.parse(xhr.responseText));
+                } catch(e) {
+                    callback("Invalid response");
+                }
+            } else {
+                callback("Connection failed");
+            }
+        }
+    };
+
+    xhr.open("GET", url, true);
+    xhr.send();
+}
+
+
+function searchStops() {
+
+    var query =
+        document.getElementById("search").value;
+
+    if (!query) {
+        document.getElementById("error").innerHTML =
+            "Enter a bus stop.";
+        return;
+    }
+
+    document.getElementById("error").innerHTML = "";
+    document.getElementById("status").innerHTML =
+        "Searching TfL...";
+    document.getElementById("stops").innerHTML = "";
+    document.getElementById("results").innerHTML = "";
+
+    var url =
+        "https://api.tfl.gov.uk/StopPoint/Search" +
+        "?query=" + encodeURIComponent(query) +
+        "&modes=bus";
+
+    request(url, function(error, data) {
+
+        if (error) {
+            document.getElementById("error").innerHTML =
+                "Could not connect to TfL.";
+            document.getElementById("status").innerHTML = "";
+            return;
+        }
+
+        document.getElementById("status").innerHTML =
+            "Choose your stop:";
+
+        var html = "";
+
+        var count =
+            Math.min(data.matches.length, 10);
+
+        for (var i = 0; i < count; i++) {
+
+            var stop = data.matches[i];
+
+            html +=
+                '<div class="stop">' +
+                '<a href="#" onclick="loadStop(\'' +
+                stop.id + '\',\'' +
+                escapeText(stop.name) +
+                '\'); return false;">' +
+                stop.name +
+                '</a>' +
+                '<br>' +
+                '<span class="small">' +
+                stop.id +
+                '</span>' +
+                '</div>';
+        }
+
+        if (!html) {
+            html = "No bus stops found.";
+        }
+
+        document.getElementById("stops").innerHTML =
+            html;
+    });
+}
+
+
+function loadStop(id, name) {
+
+    selectedStop = id;
+
+    document.getElementById("status").innerHTML =
+        "Loading live buses...";
+
+    document.getElementById("stops").innerHTML = "";
+    document.getElementById("results").innerHTML = "";
+
+    var url =
+        "https://api.tfl.gov.uk/StopPoint/" +
+        id +
+        "/Arrivals";
+
+    request(url, function(error, data) {
+
+        if (error) {
+            document.getElementById("error").innerHTML =
+                "Could not load bus times.";
+            return;
+        }
+
+        data.sort(function(a, b) {
+            return a.timeToStation -
+                   b.timeToStation;
+        });
+
+        var html =
+            "<b>" + name + "</b><br><br>";
+
+        var count =
+            Math.min(data.length, 15);
+
+        for (var i = 0; i < count; i++) {
+
+            var bus = data[i];
+
+            var minutes =
+                Math.round(bus.timeToStation / 60);
+
+            html +=
+                '<div class="bus">' +
+                '<span class="route">' +
+                bus.lineName +
+                '</span>' +
+                '<span class="time">' +
+                minutes +
+                ' min</span><br>' +
+                bus.destinationName +
+                '</div>';
+        }
+
+        if (count == 0) {
+            html += "No live buses found.";
+        }
+
+        html +=
+            '<br><button onclick="loadStop(\'' +
+            id + '\',\'' +
+            escapeText(name) +
+            '\')">REFRESH</button>';
+
+        document.getElementById("status").innerHTML = "";
+        document.getElementById("results").innerHTML =
+            html;
+    });
+}
+
+
+function escapeText(text) {
+
+    return text
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'");
+}
+
+</script>
+
+</body>
+</html>
